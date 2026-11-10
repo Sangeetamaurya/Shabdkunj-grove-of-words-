@@ -100,3 +100,6 @@ INSERT INTO reading_list (id, user_id, book_id, status, updated_at) VALUES
 ('r4', 'u1', 'b6', 'pending',  '2024-05-13 13:00:00'),
 ('r5', 'u1', 'b4', 'done',     '2024-05-14 14:00:00'),
 ('r6', 'u1', 'b7', 'done',     '2024-05-15 15:00:00');
+-- Restore original counts (triggers incremented them during seeding)
+UPDATE articles SET comments_count = 38 WHERE id = 'a1';
+UPDATE articles SET comments_count = 22 WHERE id = 'a2';

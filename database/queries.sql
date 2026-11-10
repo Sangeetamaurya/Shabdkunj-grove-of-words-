@@ -50,7 +50,7 @@ ORDER BY createdAt ASC;
 
 -- 7. setReadingStatus(userId, bookId, status) - Drag & Drop Upsert
 INSERT INTO reading_list (id, user_id, book_id, status)
-VALUES ('r_new', 'u1', 'b2', 'reading')
-ON DUPLICATE KEY UPDATE 
-    status = VALUES(status),
+VALUES ('r_new', 'u1', 'b2', 'reading') AS new_row
+ON DUPLICATE KEY UPDATE
+    status = new_row.status,
     updated_at = CURRENT_TIMESTAMP;
