@@ -39,16 +39,35 @@ export default function ArticleDetailPage() {
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const art = await api.getArticle(id);
-      if (art) {
-        setArticle(art);
-        const cmts = await api.getComments(id);
-        setComments(cmts);
+      try {
+        const art = await api.getArticle(id);
+        if (art) {
+          setArticle(art);
+          const cmts = await api.getComments(id);
+          setComments(cmts);
+          if (user) {
+            const liked = await api.getArticleLikeStatus(id, user.id);
+            useArticleStore.setState((state) => {
+              const likedArticleIds = new Set(state.likedArticleIds);
+              if (liked) likedArticleIds.add(id);
+              else likedArticleIds.delete(id);
+              return { likedArticleIds };
+            });
+          }
+        } else {
+          setArticle(null);
+          setComments([]);
+        }
+      } catch (err: any) {
+        setArticle(null);
+        setComments([]);
+        error(err.message || "Failed to load article");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadData();
-  }, [id]);
+  }, [id, user, error]);
 
   if (isLoading) {
     return (

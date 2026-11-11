@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Book, Article } from "@/types";
 import { useBookStore } from "@/store/useBookStore";
+import { useToast } from "@/components/ui/Toast";
 import * as api from "@/lib/api";
 import {
   ArrowRight,
@@ -19,23 +20,26 @@ import {
 
 export default function HomePage() {
   const { openOverlay } = useBookStore();
+  const { error: showError } = useToast();
   const [favoriteBooks, setFavoriteBooks] = useState<Book[]>([]);
   const [featuredArticle, setFeaturedArticle] = useState<Article | null>(null);
 
   useEffect(() => {
     async function loadHomeData() {
       // Load top books for Readers' favorites
-      const books = await api.getBooks({ sort: "top", limit: 4 });
-      setFavoriteBooks(books);
-
-      // Load featured article
-      const articles = await api.getArticles({ limit: 1 });
-      if (articles.length > 0) {
-        setFeaturedArticle(articles[0]);
+      try {
+        const books = await api.getBooks({ sort: "top", limit: 4 });
+        setFavoriteBooks(books);
+        const articles = await api.getArticles({ limit: 1 });
+        setFeaturedArticle(articles[0] ?? null);
+      } catch (err: any) {
+        setFavoriteBooks([]);
+        setFeaturedArticle(null);
+        showError(err.message || "Failed to load the library");
       }
     }
     loadHomeData();
-  }, []);
+  }, [showError]);
 
   const secretGardenBook = favoriteBooks.find((b) => b.name.includes("Secret Garden")) || favoriteBooks[0];
 

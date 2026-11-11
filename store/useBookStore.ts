@@ -30,7 +30,7 @@ export const useBookStore = create<BookState>((set, get) => ({
   selectedBook: null,
   isOverlayOpen: false,
   activeReaderBook: null,
-  likedBookIds: new Set(["b1", "b3", "b7"]), // default liked by Amelia
+  likedBookIds: new Set<string>(),
 
   fetchBooks: async (params) => {
     set({ isLoading: true, error: null });
@@ -46,7 +46,19 @@ export const useBookStore = create<BookState>((set, get) => ({
 
   setSelectedBook: (book) => set({ selectedBook: book }),
 
-  openOverlay: (book) => set({ selectedBook: book, isOverlayOpen: true }),
+  openOverlay: (book) => {
+    set({ selectedBook: book, isOverlayOpen: true });
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+    api.getBookLikeStatus(book.id, user.id).then((liked) => {
+      set((state) => {
+        const likedBookIds = new Set(state.likedBookIds);
+        if (liked) likedBookIds.add(book.id);
+        else likedBookIds.delete(book.id);
+        return { likedBookIds };
+      });
+    }).catch(() => {});
+  },
 
   closeOverlay: () => set({ isOverlayOpen: false, selectedBook: null }),
 
@@ -93,7 +105,22 @@ export const useBookStore = create<BookState>((set, get) => ({
     });
 
     try {
-      await api.toggleBookLike(bookId, user);
+      const result = await api.toggleBookLike(bookId, user);
+      set((state) => ({
+        books: state.books.map((book) =>
+          book.id === bookId ? { ...book, likesCount: result.likesCount } : book
+        ),
+        selectedBook:
+          state.selectedBook && state.selectedBook.id === bookId
+            ? { ...state.selectedBook, likesCount: result.likesCount }
+            : state.selectedBook,
+        likedBookIds: (() => {
+          const likedBookIds = new Set(state.likedBookIds);
+          if (result.liked) likedBookIds.add(bookId);
+          else likedBookIds.delete(bookId);
+          return likedBookIds;
+        })(),
+      }));
       return true;
     } catch (err) {
       // Rollback on failure

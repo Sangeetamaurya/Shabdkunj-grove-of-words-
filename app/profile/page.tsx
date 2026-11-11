@@ -65,23 +65,26 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       if (!user) return;
-      const [booksData, _] = await Promise.all([
-        api.getBooks(),
-        fetchReadingList(user.id),
-      ]);
+      try {
+        const [booksData] = await Promise.all([
+          api.getBooks(),
+          fetchReadingList(user.id),
+        ]);
 
-      const map: Record<string, Book> = {};
-      booksData.forEach((b) => {
-        map[b.id] = b;
-      });
-      setAllBooks(map);
+        const map: Record<string, Book> = {};
+        booksData.forEach((b) => {
+          map[b.id] = b;
+        });
+        setAllBooks(map);
 
-      // Load user articles
-      const articles = await api.getArticles({ authorId: user.id });
-      setUserArticles(articles);
+        const articles = await api.getArticles({ authorId: user.id });
+        setUserArticles(articles);
+      } catch (err: any) {
+        error(err.message || "Failed to load your reading board");
+      }
     }
     loadData();
-  }, [user, fetchReadingList]);
+  }, [user, fetchReadingList, error]);
 
   if (!user) return null;
 
