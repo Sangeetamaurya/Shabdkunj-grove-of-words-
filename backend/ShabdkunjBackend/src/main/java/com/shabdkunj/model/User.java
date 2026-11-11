@@ -6,6 +6,7 @@ public class User {
     private String email;
     private String role;
     private String avatar;
+    private String createdAt;
     private transient String passwordHash;
 
     public String getId() {
@@ -46,6 +47,14 @@ public class User {
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 
     public String getPasswordHash() {

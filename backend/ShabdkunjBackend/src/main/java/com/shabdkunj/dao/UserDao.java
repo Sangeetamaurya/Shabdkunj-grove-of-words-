@@ -13,7 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDao {
-    private static final String COLUMNS = "id, name, email, password_hash, role, avatar";
+    private static final String COLUMNS = "id, name, email, password_hash, role, avatar, created_at";
+    private static final String PUBLIC_COLUMNS = "id, name, email, role, avatar, created_at";
     private static final String SIGNUP_AVATAR =
             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
 
@@ -55,21 +56,23 @@ public class UserDao {
         return findById(id);
     }
 
-    public List<User> listAll() throws SQLException {
-        String sql = "SELECT " + COLUMNS + " FROM users ORDER BY role, name";
+    public List<User> listReadersAndLibrarians() throws SQLException {
+        String sql = "SELECT " + PUBLIC_COLUMNS + " FROM users "
+                + "WHERE role IN ('user', 'librarian') AND id <> 'system' "
+                + "ORDER BY created_at DESC, name ASC";
         try (Connection connection = DatabaseConfig.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet resultSet = statement.executeQuery()) {
             List<User> users = new ArrayList<>();
             while (resultSet.next()) {
-                users.add(map(resultSet));
+                users.add(mapPublic(resultSet));
             }
             return users;
         }
     }
 
     public boolean updateRole(String id, String role) throws SQLException {
-        String sql = "UPDATE users SET role = ? WHERE id = ? AND role <> 'admin'";
+        String sql = "UPDATE users SET role = ? WHERE id = ? AND role <> 'admin' AND id <> 'system'";
         try (Connection connection = DatabaseConfig.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, role);
@@ -86,6 +89,18 @@ public class UserDao {
         user.setPasswordHash(resultSet.getString("password_hash"));
         user.setRole(resultSet.getString("role"));
         user.setAvatar(resultSet.getString("avatar"));
+        user.setCreatedAt(RowMapper.timestamp(resultSet, "created_at"));
+        return user;
+    }
+
+    private User mapPublic(ResultSet resultSet) throws SQLException {
+        User user = new User();
+        user.setId(resultSet.getString("id"));
+        user.setName(resultSet.getString("name"));
+        user.setEmail(resultSet.getString("email"));
+        user.setRole(resultSet.getString("role"));
+        user.setAvatar(resultSet.getString("avatar"));
+        user.setCreatedAt(RowMapper.timestamp(resultSet, "created_at"));
         return user;
     }
 }

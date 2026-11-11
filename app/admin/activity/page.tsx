@@ -8,13 +8,15 @@ import { useToast } from "@/components/ui/Toast";
 import * as api from "@/lib/api";
 import { ArrowLeft } from "lucide-react";
 
-type Row = { id?: string; name?: string; title?: string; author?: string; authorName?: string; status?: string; genre?: string };
+type ActivityEvent = { eventType?: string; description?: string; occurredAt?: string };
 
 export default function LibraryActivityPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { toast, error } = useToast();
   const [activity, setActivity] = useState<Record<string, unknown> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -26,15 +28,44 @@ export default function LibraryActivityPage() {
       router.push("/");
       return;
     }
+    setIsLoading(true);
+    setLoadError(null);
     api.getLibraryActivity()
       .then(setActivity)
-      .catch((err: Error) => error(err.message || "Could not load library activity"));
+      .catch((err: Error) => {
+        const msg = err.message || "Could not load library activity";
+        setLoadError(msg);
+        error(msg);
+      })
+      .finally(() => setIsLoading(false));
   }, [user, router, toast, error]);
 
   if (!user || (user.role !== "admin" && user.role !== "librarian")) return null;
 
-  const books = (activity?.recentBooks as Row[]) || [];
-  const articles = (activity?.recentArticles as Row[]) || [];
+  const events = (activity?.events as ActivityEvent[]) || [];
+
+  const formatDateTime = (value?: string) => {
+    if (!value) return "";
+    const normalized = value.includes("T") ? value : value.replace(" ", "T");
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const eventLabel = (type?: string) => {
+    switch (type) {
+      case "user_registered": return "Registration";
+      case "book_added": return "Book added";
+      case "article_published": return "Article published";
+      default: return "Activity";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF4E8] text-[#3B2A1E] py-12 px-4 sm:px-6">
@@ -44,38 +75,48 @@ export default function LibraryActivityPage() {
           Back to the library
         </Link>
         <h1 className="font-serif text-3xl font-medium mb-8">Library activity</h1>
-        {!activity ? (
+        {isLoading ? (
           <p className="text-sm text-[#7A6552]">Loading activity...</p>
+        ) : loadError ? (
+          <p className="text-sm text-[#7A6552]">{loadError}</p>
+        ) : !activity ? (
+          <p className="text-sm text-[#7A6552]">No activity data available.</p>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-              {[
+              {([
+                ["Registered users", activity.userCount],
                 ["Books", activity.bookCount],
-                ["Published", activity.publishedArticleCount],
-                ["Drafts", activity.draftArticleCount],
+                ["Published articles", activity.publishedArticleCount],
                 ["Comments", activity.commentCount],
-              ].map(([label, value]) => (
-                <div key={String(label)} className="bg-[#FFFDF7] border border-[#E6D9C3] rounded-xl p-4">
+              ] as [string, unknown][]).map(([label, value]) => (
+                <div key={label} className="bg-[#FFFDF7] border border-[#E6D9C3] rounded-xl p-4">
                   <div className="text-[10px] uppercase tracking-wider text-[#7A6552]">{label}</div>
                   <div className="font-serif text-2xl mt-1">{Number(value ?? 0)}</div>
                 </div>
               ))}
             </div>
-            <section className="mb-8">
-              <h2 className="font-serif text-xl mb-3">Recent books</h2>
-              {books.length === 0 ? <p className="text-sm text-[#7A6552]">No books yet.</p> : books.map((book) => (
-                <div key={book.id} className="py-2 border-b border-[#E6D9C3] text-sm">
-                  {book.name} <span className="text-[#7A6552]">by {book.author}</span>
-                </div>
-              ))}
-            </section>
             <section>
-              <h2 className="font-serif text-xl mb-3">Recent articles</h2>
-              {articles.length === 0 ? <p className="text-sm text-[#7A6552]">No articles yet.</p> : articles.map((article) => (
-                <div key={article.id} className="py-2 border-b border-[#E6D9C3] text-sm">
-                  {article.title} <span className="text-[#7A6552]">{article.status} · {article.authorName}</span>
+              <h2 className="font-serif text-xl mb-3">Recent activity</h2>
+              {events.length === 0 ? (
+                <p className="text-sm text-[#7A6552]">No recorded activity yet.</p>
+              ) : (
+                <div className="bg-[#FFFDF7] border border-[#E6D9C3] rounded-2xl divide-y divide-[#E6D9C3]">
+                  {events.map((event, index) => (
+                    <div key={`${event.eventType || "event"}-${event.occurredAt || index}`} className="px-5 py-4">
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#B4532A]">
+                          {eventLabel(event.eventType)}
+                        </span>
+                        <span className="text-[11px] text-[#7A6552] whitespace-nowrap">
+                          {formatDateTime(event.occurredAt)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#3B2A1E]">{event.description}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </section>
           </>
         )}

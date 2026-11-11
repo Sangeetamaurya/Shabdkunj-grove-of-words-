@@ -8,23 +8,27 @@ import { useToast } from "@/components/ui/Toast";
 import * as api from "@/lib/api";
 import { ArrowLeft } from "lucide-react";
 
-const LABELS: Record<string, string> = {
-  readerCount: "Readers",
-  librarianCount: "Librarians",
-  adminCount: "Admins",
-  bookCount: "Books",
-  publishedArticleCount: "Published articles",
-  draftArticleCount: "Draft articles",
-  commentCount: "Comments",
-  likeCount: "Likes",
-  readingEntryCount: "Reading board entries",
-};
+const STAT_ITEMS: Array<{ key: string; label: string }> = [
+  { key: "userCount", label: "Total users" },
+  { key: "readerCount", label: "Readers" },
+  { key: "librarianCount", label: "Librarians" },
+  { key: "adminCount", label: "Admins" },
+  { key: "bookCount", label: "Books" },
+  { key: "articleCount", label: "Articles (total)" },
+  { key: "publishedArticleCount", label: "Published articles" },
+  { key: "draftArticleCount", label: "Draft articles" },
+  { key: "commentCount", label: "Comments" },
+  { key: "likeCount", label: "Likes" },
+  { key: "readingEntryCount", label: "Reading board entries" },
+];
 
 export default function AnalyticsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { toast, error } = useToast();
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -36,9 +40,16 @@ export default function AnalyticsPage() {
       router.push("/");
       return;
     }
+    setIsLoading(true);
+    setLoadError(null);
     api.getAnalytics()
       .then(setStats)
-      .catch((err: Error) => error(err.message || "Could not load analytics"));
+      .catch((err: Error) => {
+        const msg = err.message || "Could not load analytics";
+        setLoadError(msg);
+        error(msg);
+      })
+      .finally(() => setIsLoading(false));
   }, [user, router, toast, error]);
 
   if (!user || user.role !== "admin") return null;
@@ -51,11 +62,15 @@ export default function AnalyticsPage() {
           Back
         </Link>
         <h1 className="font-serif text-3xl font-medium mb-8">Website analytics</h1>
-        {!stats ? (
+        {isLoading ? (
           <p className="text-sm text-[#7A6552]">Loading analytics...</p>
+        ) : loadError ? (
+          <p className="text-sm text-[#7A6552]">{loadError}</p>
+        ) : !stats ? (
+          <p className="text-sm text-[#7A6552]">No analytics data available.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {Object.entries(LABELS).map(([key, label]) => (
+            {STAT_ITEMS.map(({ key, label }) => (
               <div key={key} className="bg-[#FFFDF7] border border-[#E6D9C3] rounded-2xl p-5">
                 <div className="text-[10px] uppercase tracking-wider text-[#7A6552]">{label}</div>
                 <div className="font-serif text-3xl mt-2">{Number(stats[key] ?? 0)}</div>
