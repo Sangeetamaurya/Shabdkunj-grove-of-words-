@@ -30,7 +30,7 @@ public class AdminServlet extends HttpServlet {
         String[] parts = JsonUtil.segments(request, "/api/admin");
         String method = request.getMethod();
         if (parts.length == 1 && "users".equals(parts[0]) && "GET".equals(method)) {
-            JsonUtil.write(response, HttpServletResponse.SC_OK, users.listAll());
+            JsonUtil.write(response, HttpServletResponse.SC_OK, users.listReadersAndLibrarians());
             return;
         }
         if (parts.length == 3 && "users".equals(parts[0]) && "role".equals(parts[2]) && "PUT".equals(method)) {

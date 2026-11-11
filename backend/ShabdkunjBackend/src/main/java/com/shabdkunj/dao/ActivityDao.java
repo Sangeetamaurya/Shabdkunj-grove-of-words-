@@ -17,16 +17,22 @@ public class ActivityDao {
         activity.put("publishedArticleCount", count("SELECT COUNT(*) FROM articles WHERE status = 'published'"));
         activity.put("draftArticleCount", count("SELECT COUNT(*) FROM articles WHERE status = 'draft'"));
         activity.put("commentCount", count("SELECT COUNT(*) FROM comments"));
-        activity.put("recentBooks", recentBooks());
-        activity.put("recentArticles", recentArticles());
+        activity.put("userCount", count("SELECT COUNT(*) FROM users WHERE id <> 'system'"));
+        activity.put("events", recentEvents());
         return activity;
     }
 
     public Map<String, Object> analytics() throws SQLException {
-        Map<String, Object> analytics = libraryActivity();
-        analytics.put("readerCount", count("SELECT COUNT(*) FROM users WHERE role = 'user'"));
+        Map<String, Object> analytics = new LinkedHashMap<>();
+        analytics.put("userCount", count("SELECT COUNT(*) FROM users WHERE id <> 'system'"));
+        analytics.put("readerCount", count("SELECT COUNT(*) FROM users WHERE role = 'user' AND id <> 'system'"));
         analytics.put("librarianCount", count("SELECT COUNT(*) FROM users WHERE role = 'librarian'"));
         analytics.put("adminCount", count("SELECT COUNT(*) FROM users WHERE role = 'admin'"));
+        analytics.put("bookCount", count("SELECT COUNT(*) FROM books"));
+        analytics.put("articleCount", count("SELECT COUNT(*) FROM articles"));
+        analytics.put("publishedArticleCount", count("SELECT COUNT(*) FROM articles WHERE status = 'published'"));
+        analytics.put("draftArticleCount", count("SELECT COUNT(*) FROM articles WHERE status = 'draft'"));
+        analytics.put("commentCount", count("SELECT COUNT(*) FROM comments"));
         analytics.put("likeCount", count("SELECT COUNT(*) FROM likes"));
         analytics.put("readingEntryCount", count("SELECT COUNT(*) FROM reading_list"));
         return analytics;
@@ -40,36 +46,39 @@ public class ActivityDao {
         }
     }
 
-    private List<Map<String, Object>> recentBooks() throws SQLException {
-        String sql = "SELECT id, name, author, genre FROM books ORDER BY created_at DESC LIMIT 5";
+    private List<Map<String, Object>> recentEvents() throws SQLException {
+        String sql = """
+                SELECT * FROM (
+                    SELECT 'user_registered' AS eventType,
+                           CONCAT('New ', CASE role WHEN 'librarian' THEN 'librarian' WHEN 'admin' THEN 'admin' ELSE 'reader' END, ' registered: ', name) AS description,
+                           created_at AS occurredAt
+                    FROM users
+                    WHERE id <> 'system'
+                    UNION ALL
+                    SELECT 'book_added' AS eventType,
+                           CONCAT('Book added: ', b.name, ' by ', b.author) AS description,
+                           b.created_at AS occurredAt
+                    FROM books b
+                    UNION ALL
+                    SELECT 'article_published' AS eventType,
+                           CONCAT('Article published: ', a.title, ' by ', u.name) AS description,
+                           a.created_at AS occurredAt
+                    FROM articles a
+                    JOIN users u ON a.author_id = u.id
+                    WHERE a.status = 'published'
+                ) AS events
+                ORDER BY occurredAt DESC
+                LIMIT 20
+                """;
         try (Connection connection = DatabaseConfig.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet resultSet = statement.executeQuery()) {
             List<Map<String, Object>> rows = new ArrayList<>();
             while (resultSet.next()) {
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("id", resultSet.getString("id"));
-                row.put("name", resultSet.getString("name"));
-                row.put("author", resultSet.getString("author"));
-                row.put("genre", resultSet.getString("genre"));
-                rows.add(row);
-            }
-            return rows;
-        }
-    }
-
-    private List<Map<String, Object>> recentArticles() throws SQLException {
-        String sql = "SELECT id, title, status, authorName FROM v_articles_full ORDER BY createdAt DESC LIMIT 5";
-        try (Connection connection = DatabaseConfig.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql);
-                ResultSet resultSet = statement.executeQuery()) {
-            List<Map<String, Object>> rows = new ArrayList<>();
-            while (resultSet.next()) {
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("id", resultSet.getString("id"));
-                row.put("title", resultSet.getString("title"));
-                row.put("status", resultSet.getString("status"));
-                row.put("authorName", resultSet.getString("authorName"));
+                row.put("eventType", resultSet.getString("eventType"));
+                row.put("description", resultSet.getString("description"));
+                row.put("occurredAt", RowMapper.timestamp(resultSet, "occurredAt"));
                 rows.add(row);
             }
             return rows;

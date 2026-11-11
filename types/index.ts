@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: UserRole;
   avatar: string;
+  createdAt?: string;
 }
 
 export type BookGenre =
