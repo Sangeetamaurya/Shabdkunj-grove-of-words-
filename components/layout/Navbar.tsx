@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
+import * as api from "@/lib/api";
 import {
   Search,
   PenSquare,
@@ -31,6 +32,18 @@ export function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    api.getCurrentUser()
+      .then((current) => {
+        if (active) useAuthStore.setState({ user: current });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -180,8 +193,42 @@ export function Navbar() {
                         className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#FAF4E8] text-[#B4532A] font-medium transition-colors"
                       >
                         <PlusCircle className="w-4 h-4" />
-                        <span>Add New Book (Admin)</span>
+                        <span>Add New Book</span>
                       </Link>
+                    )}
+                    {isAdminOrLibrarian && (
+                      <Link
+                        href="/admin/activity"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#FAF4E8] transition-colors"
+                      >
+                        <span>Library activity</span>
+                      </Link>
+                    )}
+                    {user.role === "admin" && (
+                      <>
+                        <Link
+                          href="/admin/users"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#FAF4E8] transition-colors"
+                        >
+                          <span>Readers & librarians</span>
+                        </Link>
+                        <Link
+                          href="/admin/analytics"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#FAF4E8] transition-colors"
+                        >
+                          <span>Website analytics</span>
+                        </Link>
+                        <Link
+                          href="/admin/settings"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#FAF4E8] transition-colors"
+                        >
+                          <span>Website settings</span>
+                        </Link>
+                      </>
                     )}
 
                     <Link

@@ -12,11 +12,11 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams?.get("redirect") || "/";
 
-  const { login, switchRole } = useAuthStore();
+  const { login, demoLogin } = useAuthStore();
   const { success, error } = useToast();
 
   const [email, setEmail] = useState("amelia@shabdkunj.org");
-  const [password, setPassword] = useState("password123");
+  const [password, setPassword] = useState("user@123");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,14 +29,45 @@ function LoginForm() {
       success("Welcome back to Shabdkunj");
       router.push(redirect);
     } else {
-      error("Invalid credentials. Try one of our demo accounts below.");
+      error(useAuthStore.getState().error || "Invalid credentials. Try one of our demo accounts below.");
     }
   };
 
-  const handleQuickLogin = (role: "user" | "librarian" | "admin") => {
-    switchRole(role);
-    success(`Signed in as ${role}`);
-    router.push(redirect);
+  const handleQuickLogin = async (
+    role: "user" | "librarian" | "admin"
+  ) => {
+    const credentials = {
+      user: {
+        email: "amelia@shabdkunj.org",
+        password: "user@123",
+      },
+      librarian: {
+        email: "elena@shabdkunj.org",
+        password: "librarian@12",
+      },
+      admin: {
+        email: "vikram@shabdkunj.org",
+        password: "admin@12",
+      },
+    };
+  
+    try {
+      const { email, password } = credentials[role];
+  
+      const ok = await login(email, password);
+  
+      if (ok) {
+        success(`Signed in as ${role}`);
+        router.push(redirect);
+      } else {
+        error(
+          useAuthStore.getState().error ||
+          "Invalid demo account credentials"
+        );
+      }
+    } catch (err) {
+      error("Unable to sign in. Please try again.");
+    }
   };
 
   return (

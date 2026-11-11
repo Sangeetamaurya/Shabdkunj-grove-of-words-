@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book } from "@/types";
 import { useBookStore } from "@/store/useBookStore";
+import { useToast } from "@/components/ui/Toast";
 import * as api from "@/lib/api";
 import { ArrowLeft, Heart, Sparkles, BookOpen } from "lucide-react";
 
@@ -18,6 +19,7 @@ export default function GenrePage() {
   const genre = decodeURIComponent(rawGenre);
 
   const { openOverlay } = useBookStore();
+  const { error: showError } = useToast();
   const [books, setBooks] = useState<Book[]>([]);
   const [activeTab, setActiveTab] = useState<SortTab>("latest");
   const [isLoading, setIsLoading] = useState(true);
@@ -25,12 +27,18 @@ export default function GenrePage() {
   useEffect(() => {
     async function loadGenreBooks() {
       setIsLoading(true);
-      const data = await api.getBooks({ genre, sort: activeTab });
-      setBooks(data);
-      setIsLoading(false);
+      try {
+        const data = await api.getBooks({ genre, sort: activeTab });
+        setBooks(data);
+      } catch (err: any) {
+        setBooks([]);
+        showError(err.message || "Failed to load books");
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadGenreBooks();
-  }, [genre, activeTab]);
+  }, [genre, activeTab, showError]);
 
   const tabs: Array<{ id: SortTab; label: string }> = [
     { id: "latest", label: "Latest" },

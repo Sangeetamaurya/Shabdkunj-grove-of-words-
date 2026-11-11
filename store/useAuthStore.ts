@@ -2,13 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { User, UserRole } from "@/types";
 import * as api from "@/lib/api";
-import { MOCK_USERS } from "@/lib/mock-data";
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password?: string) => Promise<boolean>;
+  demoLogin: (role: UserRole) => Promise<boolean>;
   signup: (name: string, email: string, password?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   switchRole: (role: UserRole | "guest") => void;
@@ -35,6 +35,18 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      demoLogin: async (role) => {
+        set({ isLoading: true, error: null });
+        try {
+          const user = await api.demoLogin(role);
+          set({ user, isLoading: false });
+          return true;
+        } catch (err: any) {
+          set({ error: err.message || "Demo sign-in failed", isLoading: false });
+          return false;
+        }
+      },
+
       signup: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
@@ -53,17 +65,12 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, isLoading: false, error: null });
       },
 
-      // Demo role switcher helper
       switchRole: (role) => {
         if (role === "guest") {
-          set({ user: null });
-        } else if (role === "librarian") {
-          set({ user: MOCK_USERS[1] }); // Elena Vance
-        } else if (role === "admin") {
-          set({ user: MOCK_USERS[2] }); // Vikram Malhotra
-        } else {
-          set({ user: MOCK_USERS[0] }); // Amelia Moore (user)
+          void useAuthStore.getState().logout();
+          return;
         }
+        void useAuthStore.getState().demoLogin(role);
       },
 
       clearError: () => set({ error: null }),

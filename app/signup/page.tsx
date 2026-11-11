@@ -35,7 +35,7 @@ function SignupForm() {
       success("Welcome to Shabdkunj! Your reading sanctuary is ready.");
       router.push(redirect);
     } else {
-      error("Could not complete registration. Try another email.");
+      error(useAuthStore.getState().error || "Could not complete registration. Try another email.");
     }
   };
 

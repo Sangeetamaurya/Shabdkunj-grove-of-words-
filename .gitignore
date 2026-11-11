@@ -42,3 +42,5 @@ coverage/
 *.sqlite
 *.db
 
+# Shabdkunj backend database credentials
+backend/ShabdkunjBackend/src/main/resources/db.properties

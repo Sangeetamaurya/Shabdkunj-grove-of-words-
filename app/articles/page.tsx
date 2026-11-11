@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Article, ArticleCategory } from "@/types";
 import { useArticleStore } from "@/store/useArticleStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useToast } from "@/components/ui/Toast";
 import * as api from "@/lib/api";
 import { Heart, MessageSquare, BookOpen, Clock, Search } from "lucide-react";
 
@@ -16,6 +17,7 @@ type SortTab = "latest" | "top" | "trending";
 export default function ArticlesPage() {
   const { user } = useAuthStore();
   const { toggleLike, likedArticleIds } = useArticleStore();
+  const { error: showError } = useToast();
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -26,16 +28,38 @@ export default function ArticlesPage() {
   useEffect(() => {
     async function loadArticles() {
       setIsLoading(true);
-      const data = await api.getArticles({
-        category: selectedCategory === "All" ? undefined : selectedCategory,
-        sort: activeSort,
-        search: searchQuery,
-      });
-      setArticles(data);
-      setIsLoading(false);
+      try {
+        const data = await api.getArticles({
+          category: selectedCategory === "All" ? undefined : selectedCategory,
+          sort: activeSort,
+          search: searchQuery,
+        });
+        setArticles(data);
+        if (user) {
+          const liked = await Promise.all(
+            data.map(async (article) => ({
+              id: article.id,
+              liked: await api.getArticleLikeStatus(article.id, user.id),
+            }))
+          );
+          useArticleStore.setState((state) => {
+            const likedArticleIds = new Set(state.likedArticleIds);
+            liked.forEach((item) => {
+              if (item.liked) likedArticleIds.add(item.id);
+              else likedArticleIds.delete(item.id);
+            });
+            return { likedArticleIds };
+          });
+        }
+      } catch (err: any) {
+        setArticles([]);
+        showError(err.message || "Failed to load articles");
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadArticles();
-  }, [selectedCategory, activeSort, searchQuery]);
+  }, [selectedCategory, activeSort, searchQuery, user, showError]);
 
   return (
     <div className="min-h-screen bg-[#FAF4E8] text-[#3B2A1E] py-12 px-4 sm:px-6">

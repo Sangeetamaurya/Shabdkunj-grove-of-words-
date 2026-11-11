@@ -18,7 +18,7 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
   articles: [],
   isLoading: false,
   error: null,
-  likedArticleIds: new Set(["a1"]),
+  likedArticleIds: new Set<string>(),
 
   fetchArticles: async (params) => {
     set({ isLoading: true, error: null });
@@ -53,7 +53,18 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
     set({ articles: updated, likedArticleIds: newLiked });
 
     try {
-      await api.toggleArticleLike(articleId, user);
+      const result = await api.toggleArticleLike(articleId, user);
+      set((state) => ({
+        articles: state.articles.map((article) =>
+          article.id === articleId ? { ...article, likesCount: result.likesCount } : article
+        ),
+        likedArticleIds: (() => {
+          const likedArticleIds = new Set(state.likedArticleIds);
+          if (result.liked) likedArticleIds.add(articleId);
+          else likedArticleIds.delete(articleId);
+          return likedArticleIds;
+        })(),
+      }));
       return true;
     } catch {
       // Rollback

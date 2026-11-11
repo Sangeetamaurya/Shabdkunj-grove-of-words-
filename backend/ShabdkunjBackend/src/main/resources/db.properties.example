@@ -1,0 +1,15 @@
+# Copy this file to db.properties for local use, or set the environment variables below.
+# db.properties is gitignored. Do not put a real password in this example file.
+#
+# SHABDKUNJ_DB_URL
+# SHABDKUNJ_DB_USER
+# SHABDKUNJ_DB_PASSWORD
+# SHABDKUNJ_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+#
+# Environment variables override db.properties.
+# The Next.js dev server on localhost:3000 and Tomcat on localhost:8080 are the same
+# site, so the session cookie uses SameSite=Lax and is sent on credentialed fetch.
+
+db.url=jdbc:mysql://localhost:3306/shabdkunj_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+db.user=your_mysql_user
+db.password=your_mysql_password

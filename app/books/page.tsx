@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Book } from "@/types";
 import { useBookStore } from "@/store/useBookStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useToast } from "@/components/ui/Toast";
 import { BookRow } from "@/components/books/BookRow";
 import * as api from "@/lib/api";
 import { Search, Plus, BookOpen, Sparkles, X } from "lucide-react";
@@ -34,6 +35,7 @@ function BooksContent() {
 
   const { user } = useAuthStore();
   const { openOverlay } = useBookStore();
+  const { error: showError } = useToast();
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
@@ -52,12 +54,18 @@ function BooksContent() {
   useEffect(() => {
     async function loadAllBooks() {
       setIsLoading(true);
-      const data = await api.getBooks();
-      setAllBooks(data);
-      setIsLoading(false);
+      try {
+        const data = await api.getBooks();
+        setAllBooks(data);
+      } catch (err: any) {
+        setAllBooks([]);
+        showError(err.message || "Failed to load books");
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadAllBooks();
-  }, []);
+  }, [showError]);
 
   const isAdminOrLibrarian = user?.role === "admin" || user?.role === "librarian";
 

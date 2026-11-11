@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+  <!--
+    localhost:3000 and localhost:8080 are the same site, so Lax cookies are included
+    on credentialed fetch from the Next.js dev server. A frontend on another site
+    needs SameSite=None and HTTPS.
+  -->
+  <CookieProcessor className="org.apache.tomcat.util.http.Rfc6265CookieProcessor"
+                   sameSiteCookies="lax"/>
+</Context>
